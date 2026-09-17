@@ -1,0 +1,34 @@
+======================================================================
+STRUCTURAL DECODE VERIFICATION
+======================================================================
+
+rows: train=8693  test=4277  combined=12970
+train columns: 27  test columns: 26
+target present in train: True | in test: False
+
+[1] PassengerId 'gggg_pp' parse failures: 0
+    PassengerId unique: True
+    PassengerId nulls : 0
+    distinct groups   : 9280
+    MemberNo range    : 1..8
+    groups spanning BOTH train and test: 0 of 9280
+
+[2] Cabin 'deck/num/side' parse failures (non-null Cabin): 0
+    Cabin nulls: 299
+    decks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'T']
+    sides: ['P', 'S']
+    CabinNum range: 0..1894
+
+[3] Name 'first surname' parse failures (non-null Name): 0
+    Name nulls: 294
+    distinct surnames: 2406
+    name token counts: {2: 12676}
+
+[4] derived features
+    GroupSize   range: 1..8
+    SurnameSize range: 1.0..19.0
+    TotalSpend  nulls: 0
+    rows with a PARTIAL TotalSpend (1-4 services NaN): 1363
+    rows with all 5 services NaN: 0
+
+PASS: total parse failures = 0

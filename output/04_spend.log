@@ -1,0 +1,84 @@
+======================================================================
+04 SPEND & CRYOSLEEP
+======================================================================
+marginal transport rate (train) = 0.5036
+
+[CryoSleep vs spend] frame=combined
+  CryoSleep=True : 4,581   CryoSleep=False: 8,079   NaN: 310
+     service  cryo_nonnull  cryo_nonzero  cryo_max  awake_nonnull  awake_zero_pct  awake_median_nonzero  awake_max
+ RoomService          4488             0       0.0           7912           44.75                 319.0    14327.0
+   FoodCourt          4472             0       0.0           7902           43.04                 398.0    29813.0
+ShoppingMall          4450             0       0.0           7914           45.54                 197.0    23492.0
+         Spa          4474             0       0.0           7909           40.54                 232.0    22408.0
+      VRDeck          4490             0       0.0           7910           44.11                 257.5    24133.0
+
+  CryoSleep passengers with ANY nonzero spend: 0
+  -> the constraint HOLDS EXACTLY: a frozen passenger never spends
+  NaN spend cells under CryoSleep=True: 531 -> all logically ZERO, not unknown
+
+  rows with CryoSleep missing: 310
+    ...of which show nonzero spend -> must be AWAKE: 174 (56.1%)
+    -> spend recovers 174 of 310 missing CryoSleep values with certainty; the rest are only probably frozen
+  -> figures/04_cryo_zero_spend.png
+
+[rate by CryoSleep] frame=train
+              n     k    rate      lo      hi  ci_width
+CryoSleep                                              
+False      5439  1789  0.3289  0.3166  0.3415    0.0250
+True       3037  2483  0.8176  0.8034  0.8309    0.0275
+NaN         217   106  0.4885  0.4228  0.5546    0.1319
+
+[rate by AnySpend] frame=train
+  NOTE: AnySpend=False is only certain when SpendNaN==0; a row with an
+  unobserved service could hide spend. Reported both ways.
+             n     k    rate      lo      hi  ci_width
+AnySpend                                              
+False     3653  2873  0.7865  0.7729  0.7995    0.0266
+True      5040  1505  0.2986  0.2861  0.3114    0.0253
+  restricted to fully-observed spend rows (n=7785):
+             n     k    rate      lo      hi  ci_width
+AnySpend                                              
+False     3247  2545  0.7838  0.7693  0.7976    0.0283
+True      4538  1367  0.3012  0.2881  0.3147    0.0267
+
+[CryoSleep x AnySpend] frame=train
+                       n    rate
+CryoSleep AnySpend              
+False     False      518  0.6158
+          True      4921  0.2987
+True      False     3037  0.8176
+  -> figures/04_cryo_and_anyspend.png
+
+[rate by spent-on-service] frame=train
+     service  n_spent  rate_spent  n_zero  rate_zero     gap
+ RoomService     2935      0.2600    5577     0.6333 -0.3733
+   FoodCourt     3054      0.3454    5456     0.5909 -0.2455
+ShoppingMall     2898      0.3171    5587     0.5987 -0.2816
+         Spa     3186      0.2775    5324     0.6392 -0.3617
+      VRDeck     3010      0.2754    5495     0.6280 -0.3526
+  CAUTION: this raw cut is confounded by CryoSleep -- spending at all
+  implies awake, and awake passengers are transported at 33%. Every
+  service looks negative for that reason alone. Stratify on awake:
+
+[rate by spent-on-service, AWAKE ONLY] frame=train, n=5439, awake base rate=0.3289
+     service  n_spent  rate_spent  n_zero  rate_zero     gap     se        z   sig
+ RoomService     2864      0.2605    2464     0.4111 -0.1506 0.0129 -11.7095  True
+   FoodCourt     2975      0.3455    2354     0.3080  0.0376 0.0129   2.9103  True
+ShoppingMall     2833      0.3180    2502     0.3421 -0.0241 0.0129  -1.8668 False
+         Spa     3108      0.2783    2218     0.4013 -0.1229 0.0132  -9.3491  True
+      VRDeck     2939      0.2763    2381     0.3935 -0.1172 0.0130  -9.0386  True
+  spending RAISES transport odds: ['FoodCourt']
+  spending LOWERS transport odds: ['RoomService', 'Spa', 'VRDeck']
+  flat (gap not distinguishable from zero at 95%): ['ShoppingMall']
+  -> the five services are NOT interchangeable; a single TotalSpend column destroys this split
+  -> figures/04_rate_by_service.png
+
+[spend distributions] frame=combined
+              zero_pct  nonzero_n  nonzero_median  nonzero_p90      max
+RoomService      64.02       4404           313.5       1632.7  14327.0
+FoodCourt        62.81       4535           402.0       3573.4  29813.0
+ShoppingMall     64.23       4333           197.0       1235.8  23492.0
+Spa              61.18       4751           230.0       2067.0  22408.0
+VRDeck           63.62       4450           254.5       2167.1  24133.0
+  TotalSpend: zero 42.1%  median(nonzero) 1219  max 35987
+  -> figures/04_spend_distributions.png

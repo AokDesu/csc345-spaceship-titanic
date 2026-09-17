@@ -1,0 +1,79 @@
+======================================================================
+02 GROUPS & FAMILIES
+======================================================================
+marginal transport rate (train) = 0.5036
+
+[group sizes] frame=combined
+  groups=9280  passengers=12970
+  size distribution (groups): {1: 7145, 2: 1295, 3: 502, 4: 154, 5: 76, 6: 42, 7: 47, 8: 19}
+  solo travellers: 7145 (55.1%) | in a group: 5825 (44.9%)
+
+[rate by group size] frame=train
+       n     k    rate      lo      hi  ci_width
+1   4805  2174  0.4524  0.4384  0.4666    0.0281
+2   1682   905  0.5380  0.5142  0.5618    0.0476
+3   1020   605  0.5931  0.5627  0.6229    0.0602
+4    412   264  0.6408  0.5933  0.6856    0.0923
+5    265   157  0.5925  0.5324  0.6499    0.1175
+6+   509   273  0.5363  0.4929  0.5792    0.0863
+  solo    : rate=0.4524  n=4805
+  grouped : rate=0.5669  n=3888
+  gap     : +0.1144
+  -> figures/02_rate_by_groupsize.png
+
+[fate concordance] frame=train
+  travel group: units=1412 members=3888 pairs=4501
+    P(mate transported | ego transported)     = 0.6074
+    P(mate transported | ego NOT transported) = 0.5148
+    same-fate pair share = 0.5545 (chance = 0.5000)
+    lift over marginal = +0.1038
+  surname (family): units=1835 members=8111 pairs=18804
+    P(mate transported | ego transported)     = 0.5161
+    P(mate transported | ego NOT transported) = 0.4700
+    same-fate pair share = 0.5232 (chance = 0.5000)
+    lift over marginal = +0.0125
+  exact cabin: units=1133 members=3067 pairs=3323
+    P(mate transported | ego transported)     = 0.6500
+    P(mate transported | ego NOT transported) = 0.5456
+    same-fate pair share = 0.5736 (chance = 0.5000)
+    lift over marginal = +0.1464
+
+  [robustness] same measure restricted to size-2 units only:
+    travel group       pairs=  841  P(mate T|ego T)=0.5856  P(mate T|ego F)=0.4826  swing=+0.1030  (all sizes: +0.0926)
+    surname (family)   pairs=  400  P(mate T|ego T)=0.5114  P(mate T|ego F)=0.4765  swing=+0.0348  (all sizes: +0.0462)
+    exact cabin        pairs=  686  P(mate T|ego T)=0.6512  P(mate T|ego F)=0.5135  swing=+0.1376  (all sizes: +0.1044)
+    -> the effect is not an artefact of large-group weighting
+  -> figures/02_fate_concordance.png
+
+[attribute constancy within unit] frame=combined
+   unit        attr  units_tested  single_valued
+  Group  HomePlanet          2134         1.0000
+  Group        Deck          2134         0.6846
+  Group        Side          2134         1.0000
+  Group    CabinNum          2134         0.6856
+  Group       Cabin          2134         0.6846
+  Group Destination          2135         0.4988
+  Group     Surname          2135         0.8286
+  Group   CryoSleep          2133         0.4233
+Surname  HomePlanet          2197         1.0000
+Surname        Deck          2198         0.1702
+Surname        Side          2198         0.2575
+Surname    CabinNum          2198         0.0646
+Surname       Cabin          2198         0.0641
+Surname Destination          2198         0.2557
+Surname   CryoSleep          2198         0.1956
+  -> figures/02_group_constancy.png
+
+[recoverable missing values via unit-mates] frame=combined
+   unit        attr  missing  recoverable  share
+  Group  HomePlanet      288          131 0.4549
+  Group        Deck      299          137 0.4582
+  Group        Side      299          137 0.4582
+  Group Destination      274          120 0.4380
+  Group       Cabin      299          137 0.4582
+Surname  HomePlanet      278          271 0.9748
+Surname        Deck      296          292 0.9865
+Surname        Side      296          292 0.9865
+Surname Destination      270          266 0.9852
+Surname       Cabin      296          292 0.9865
+  -> figures/02_recoverable_missing.png

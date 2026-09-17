@@ -1,0 +1,10 @@
+# Pinned to the environment verified working on 2026-09-17.
+# Rebuild with:  uv venv --python 3.12 && uv pip install -r requirements.txt
+pandas==3.0.5
+numpy==2.5.3
+matplotlib==3.11.2
+seaborn==0.13.2
+scikit-learn==1.9.1
+scipy==1.18.1
+jupyterlab==4.6.3
+ipykernel==7.3.0

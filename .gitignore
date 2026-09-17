@@ -1,0 +1,9 @@
+# Virtual environment - rebuild with: uv venv --python 3.12 && uv pip install -r requirements.txt
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Jupyter
+.ipynb_checkpoints/

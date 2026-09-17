@@ -1,0 +1,60 @@
+======================================================================
+01 OVERVIEW
+======================================================================
+
+[target balance] frame=train  n=8693
+Transported
+True     4378
+False    4315
+  base transport rate = 0.5036
+  target nulls        = 0
+  -> balanced (~50/50); majority-class baseline accuracy = 0.5036
+
+[missingness] frame=combined (train+test, n=12970)
+              train_n  train_pct  test_n  test_pct  combined_n  combined_pct
+CryoSleep         217       2.50      93      2.17         310          2.39
+ShoppingMall      208       2.39      98      2.29         306          2.36
+Cabin             199       2.29     100      2.34         299          2.31
+VIP               203       2.34      93      2.17         296          2.28
+Name              200       2.30      94      2.20         294          2.27
+FoodCourt         183       2.11     106      2.48         289          2.23
+HomePlanet        201       2.31      87      2.03         288          2.22
+Spa               183       2.11     101      2.36         284          2.19
+Destination       182       2.09      92      2.15         274          2.11
+Age               179       2.06      91      2.13         270          2.08
+VRDeck            188       2.16      80      1.87         268          2.07
+RoomService       181       2.08      82      1.92         263          2.03
+PassengerId         0       0.00       0      0.00           0          0.00
+
+  complete columns (zero nulls): ['PassengerId']
+  columns with nulls: 12  range 2.03%..2.39%  spread 0.36pp
+  -> missingness is UNIFORM across nullable columns
+  rows with >=1 null: 3083 (23.8%) -- dropping incomplete rows would cost 23.8% of the data
+  nulls per row: {0: 9887, 1: 2746, 2: 316, 3: 21}
+  rows with >=1 null expected under independence: 3052 vs observed 3083 -> missingness is INDEPENDENT across columns
+
+[dtypes & cardinality] frame=combined
+                dtype  nunique
+PassengerId       str    12970
+HomePlanet        str        3
+CryoSleep      object        2
+Cabin             str     9825
+Destination       str        3
+Age           float64       80
+VIP            object        2
+RoomService   float64     1578
+FoodCourt     float64     1953
+ShoppingMall  float64     1367
+Spa           float64     1679
+VRDeck        float64     1642
+Name              str    12629
+  HomePlanet: {'Earth': 6865, 'Europa': 3133, 'Mars': 2684, nan: 288}
+  CryoSleep: {False: 8079, True: 4581, nan: 310}
+  Destination: {'TRAPPIST-1e': 8871, '55 Cancri e': 2641, 'PSO J318.5-22': 1184, nan: 274}
+  VIP: {False: 12401, nan: 296, True: 273}
+  Destination: {'TRAPPIST-1e': 8871, '55 Cancri e': 2641, 'PSO J318.5-22': 1184, nan: 274}
+
+[figures]
+  -> figures/01_missingness.png
+  -> figures/01_nulls_per_row.png
+  -> figures/01_target_balance.png

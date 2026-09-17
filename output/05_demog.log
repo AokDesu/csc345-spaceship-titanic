@@ -1,0 +1,93 @@
+======================================================================
+05 AGE / HOMEPLANET / DESTINATION / VIP
+======================================================================
+marginal transport rate (train) = 0.5036
+
+[age distribution] frame=combined
+count    12700.00
+mean        28.77
+std         14.39
+min          0.00
+25%         19.00
+50%         27.00
+75%         38.00
+max         79.00
+  age==0 rows: 260 (infants, not a missing-value sentinel: Age has 270 explicit NaNs)
+
+[rate by age bin] frame=train
+           n     k    rate      lo      hi  ci_width
+AgeBin                                              
+0-4      466   358  0.7682  0.7278  0.8043    0.0764
+5-12     299   177  0.5920  0.5354  0.6462    0.1107
+13-17    622   349  0.5611  0.5218  0.5996    0.0778
+18-25   2266  1049  0.4629  0.4425  0.4835    0.0410
+26-35   2177  1046  0.4805  0.4595  0.5015    0.0419
+36-50   1873   915  0.4885  0.4659  0.5112    0.0452
+51-65    704   347  0.4929  0.4561  0.5298    0.0737
+66+      107    47  0.4393  0.3489  0.5338    0.1848
+  children (<13): rate=0.6998 n=806
+  adults  (>=18): rate=0.4757 n=6969
+  gap = +0.2241
+  ...among AWAKE only: children 0.6823 (n=406) vs adults 0.3046 (n=4576) -> gap +0.3776
+  children who spend anything: 0.0% vs adults 65.7%
+  -> figures/05_rate_by_age.png
+  -> figures/05_age_hist.png
+
+[rate by HomePlanet] frame=train
+               n     k    rate      lo      hi  ci_width
+HomePlanet                                              
+Earth       4602  1951  0.4239  0.4097  0.4383    0.0285
+Europa      2131  1404  0.6588  0.6384  0.6787    0.0402
+Mars        1759   920  0.5230  0.4997  0.5463    0.0466
+NaN          201   103  0.5124  0.4438  0.5807    0.1369
+
+[rate by Destination] frame=train
+                  n     k    rate      lo      hi  ci_width
+Destination                                                
+55 Cancri e    1800  1098  0.6100  0.5873  0.6323    0.0450
+PSO J318.5-22   796   401  0.5038  0.4691  0.5384    0.0693
+TRAPPIST-1e    5915  2787  0.4712  0.4585  0.4839    0.0254
+NaN             182    92  0.5055  0.4335  0.5773    0.1438
+
+[HomePlanet x Destination] frame=train
+                             n    rate
+HomePlanet Destination                
+Earth      55 Cancri e     690  0.5043
+           PSO J318.5-22   712  0.4986
+           TRAPPIST-1e    3101  0.3892
+Europa     55 Cancri e     886  0.6896
+           PSO J318.5-22    19  0.7368
+           TRAPPIST-1e    1189  0.6350
+Mars       55 Cancri e     193  0.6114
+           PSO J318.5-22    49  0.4490
+           TRAPPIST-1e    1475  0.5119
+  destination spread within each home planet:
+    Earth: 0.389..0.504 (spread 0.115)
+    Europa: 0.635..0.690 (spread 0.055)
+    Mars: 0.449..0.611 (spread 0.162)
+  -> figures/05_rate_by_origin_destination.png
+
+[VIP] frame=train
+  VIP base rate in combined: 0.0210 (273 of 12970)
+          n     k    rate      lo      hi  ci_width
+VIP                                                
+False  8291  4198  0.5063  0.4956  0.5171    0.0215
+True    199    76  0.3819  0.3172  0.4510    0.1338
+NaN     203   104  0.5123  0.4440  0.5802    0.1362
+  VIP - non-VIP gap = -0.1244
+  VIP 95% CI = [0.3172, 0.4510] (width 0.1338, n=199)
+  intervals overlap: False -> the gap is real but rests on a tiny class
+
+[VIP x HomePlanet] frame=combined for the mix, train for the rates
+HomePlanet   Earth  Europa    Mars
+VIP                               
+False       0.5532  0.2378  0.2090
+True        0.0000  0.6629  0.3371
+  VIPs by planet: {'Europa': 177, 'Mars': 90}
+  -> there is not a single VIP from Earth
+    Europa  VIP 0.4885 (n=131, CI[0.405,0.573])  non-VIP 0.6701 (n=1958)  gap -0.1815
+    Mars    VIP 0.1587 (n=63, CI[0.089,0.268])  non-VIP 0.5342 (n=1653)  gap -0.3755
+  -> the within-planet gap is LARGER than the -0.1244 unconditional one:
+     VIPs concentrate on Europa, the highest-rate planet, which was
+     masking the deficit rather than creating it
+  -> figures/05_vip.png
