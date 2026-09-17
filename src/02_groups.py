@@ -257,7 +257,7 @@ def main():
     print("  units_multi  = multi-member units of this kind in the frame")
     print("  units_tested = those with >=2 OBSERVED values of the attribute,")
     print("                 i.e. the only ones that could have violated it.")
-    print("  -> the 100% results below hold on a denominator that could have broken them.")
+    print("  -> the 100% results above hold on a denominator that could have broken them.")
 
     piv = const.pivot(index="attr", columns="unit", values="single_valued")
     piv = piv.sort_values("Group", ascending=True)

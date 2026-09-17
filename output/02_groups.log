@@ -76,7 +76,7 @@ Surname   CryoSleep         2198          2174          24         0.1868
   units_multi  = multi-member units of this kind in the frame
   units_tested = those with >=2 OBSERVED values of the attribute,
                  i.e. the only ones that could have violated it.
-  -> the 100% results below hold on a denominator that could have broken them.
+  -> the 100% results above hold on a denominator that could have broken them.
   -> figures/02_group_constancy.png
 
 [recoverable missing values via unit-mates] frame=combined
