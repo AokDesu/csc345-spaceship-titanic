@@ -121,11 +121,11 @@ F     4239    0  1894   926.0
 G     3781    0  1508   754.0
 T       11    0     4     2.0
   multi-member groups with a cabin: 2068
-  ...all in ONE identical cabin: 1397 (67.6%)
-  ...split across 2+ cabins but span <= 2: 1
+  ...all in ONE identical cabin: 1395 (67.5%)
+  ...split across 2+ cabins but span <= 2: 3
   ...split, span > 10                   : 654
   span of the split groups: median=254 max=1581
-  split groups that also span >1 DECK: 671 of 671
+  split groups that also span >1 DECK: 673 of 673
   -> there is no 'adjacent cabin' case. A group either shares one
      identical cabin (2/3) or is scattered across different decks
      entirely (1/3). CabinNum is a location, not a group id.

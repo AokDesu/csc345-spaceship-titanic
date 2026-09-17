@@ -43,25 +43,40 @@ marginal transport rate (train) = 0.5036
     surname (family)   pairs=  400  P(mate T|ego T)=0.5114  P(mate T|ego F)=0.4765  swing=+0.0348  (all sizes: +0.0462)
     exact cabin        pairs=  686  P(mate T|ego T)=0.6512  P(mate T|ego F)=0.5135  swing=+0.1376  (all sizes: +0.1044)
     -> the effect is not an artefact of large-group weighting
+
+  [uncertainty] cluster bootstrap over travel groups:
+    reps=4000  seed=0  clusters resampled=6217  (95% percentile intervals)
+    group              +0.0926  95% CI [+0.0574, +0.1282]  se=0.0181
+    cabin              +0.1044  95% CI [+0.0650, +0.1451]  se=0.0205
+    cabin_minus_group  +0.0118  95% CI [-0.0082, +0.0322]  se=0.0105
+    P(cabin swing > group swing) = 0.868
+    -> cabin vs group: the difference is INSIDE its own interval,
+       so the two are not distinguishable by this data.
+       group vs surname IS separated: the group interval [+0.0574, +0.1282] excludes
+       the surname point +0.0462.
   -> figures/02_fate_concordance.png
 
 [attribute constancy within unit] frame=combined
-   unit        attr  units_tested  single_valued
-  Group  HomePlanet          2134         1.0000
-  Group        Deck          2134         0.6846
-  Group        Side          2134         1.0000
-  Group    CabinNum          2134         0.6856
-  Group       Cabin          2134         0.6846
-  Group Destination          2135         0.4988
-  Group     Surname          2135         0.8286
-  Group   CryoSleep          2133         0.4233
-Surname  HomePlanet          2197         1.0000
-Surname        Deck          2198         0.1702
-Surname        Side          2198         0.2575
-Surname    CabinNum          2198         0.0646
-Surname       Cabin          2198         0.0641
-Surname Destination          2198         0.2557
-Surname   CryoSleep          2198         0.1956
+   unit        attr  units_multi  units_tested  untestable  single_valued
+  Group  HomePlanet         2135          2076          59         1.0000
+  Group        Deck         2135          2068          67         0.6746
+  Group        Side         2135          2068          67         1.0000
+  Group    CabinNum         2135          2068          67         0.6755
+  Group       Cabin         2135          2068          67         0.6746
+  Group Destination         2135          2076          59         0.4846
+  Group     Surname         2135          2071          64         0.8233
+  Group   CryoSleep         2135          2073          62         0.4067
+Surname  HomePlanet         2198          2185          13         1.0000
+Surname        Deck         2198          2177          21         0.1621
+Surname        Side         2198          2177          21         0.2503
+Surname    CabinNum         2198          2177          21         0.0556
+Surname       Cabin         2198          2177          21         0.0551
+Surname Destination         2198          2186          12         0.2516
+Surname   CryoSleep         2198          2174          24         0.1868
+  units_multi  = multi-member units of this kind in the frame
+  units_tested = those with >=2 OBSERVED values of the attribute,
+                 i.e. the only ones that could have violated it.
+  -> the 100% results below hold on a denominator that could have broken them.
   -> figures/02_group_constancy.png
 
 [recoverable missing values via unit-mates] frame=combined

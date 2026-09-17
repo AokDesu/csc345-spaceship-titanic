@@ -157,3 +157,116 @@ def rate_table(df, by, target="Transported", min_n=0):
     out["lo"], out["hi"] = lo, hi
     out["ci_width"] = out["hi"] - out["lo"]
     return out[out["n"] >= min_n]
+
+
+def cluster_bootstrap(df, cluster, statistic, reps=2000, seed=0, alpha=0.05):
+    """Percentile bootstrap interval for a statistic whose unit is not the row.
+
+    `wilson()` above is the right tool for a proportion over independent
+    observations. This is the tool for the case where the observations are
+    *not* independent because they share a cluster -- and finding 1 is exactly
+    that case. Its 3,323 cabin "pairs" come from 3,067 passengers, each of whom
+    appears in several pairs, so treating the pairs as 3,323 independent
+    observations (or attaching a textbook standard error to them) reports an
+    interval far narrower than the data earns. Resampling whole clusters keeps
+    the dependence intact.
+
+    df         frame whose rows are observations
+    cluster    column naming the independent unit to resample (e.g. "Group")
+    statistic  callable(frame) -> float, or -> dict of named floats
+    reps, seed fixed by default, so the interval is reproducible run to run
+
+    `statistic` is handed a resampled copy of `df` whose `cluster` column has
+    been REPLACED by a fresh integer id per draw. A cluster drawn twice
+    therefore arrives under two ids rather than collapsing back into one --
+    that collapse is the classic cluster-bootstrap bug and it silently narrows
+    the interval. Any key nested inside the cluster (`Cabin` inside `Group`)
+    must be paired with that id by the statistic, for the same reason.
+
+    Returns a DataFrame indexed by statistic name with columns point, lo, hi,
+    se, and `reps` / `seed` / `alpha` / `clusters` recorded in `.attrs`.
+    """
+    import pandas as pd
+
+    rng = np.random.default_rng(seed)
+    sub = df[df[cluster].notna()]
+    order = np.argsort(sub[cluster].to_numpy(), kind="stable")
+    counts = sub.groupby(cluster, observed=True).size().sort_index().to_numpy()
+    starts = np.concatenate(([0], np.cumsum(counts)[:-1]))
+    n_clusters = len(counts)
+
+    def _as_dict(value):
+        return value if isinstance(value, dict) else {"statistic": float(value)}
+
+    point = _as_dict(statistic(df))
+    draws = {name: np.empty(reps) for name in point}
+
+    for r in range(reps):
+        pick = rng.integers(0, n_clusters, n_clusters)
+        lens = counts[pick]
+        # Ragged gather, vectorised: offset each drawn block into a flat range.
+        flat = np.arange(lens.sum()) + np.repeat(
+            starts[pick] - np.concatenate(([0], np.cumsum(lens)[:-1])), lens)
+        rep = sub.iloc[order[flat]].copy()
+        rep[cluster] = np.repeat(np.arange(n_clusters), lens)  # fresh id per DRAW
+        for name, value in _as_dict(statistic(rep)).items():
+            draws[name][r] = value
+
+    lo_q, hi_q = 100 * alpha / 2, 100 * (1 - alpha / 2)
+    out = pd.DataFrame({
+        "point": pd.Series(point),
+        "lo": {k: np.percentile(v, lo_q) for k, v in draws.items()},
+        "hi": {k: np.percentile(v, hi_q) for k, v in draws.items()},
+        "se": {k: v.std(ddof=1) for k, v in draws.items()},
+        "p_positive": {k: float((v > 0).mean()) for k, v in draws.items()},
+    })
+    out.attrs.update(reps=reps, seed=seed, alpha=alpha, clusters=n_clusters,
+                     draws=draws)
+    return out
+
+
+def _selftest():
+    """Behavioural checks for cluster_bootstrap. Run: python src/viz.py
+
+    No test runner is configured in this project, so these live here rather
+    than pulling in test infrastructure the analysis does not otherwise need.
+    """
+    import pandas as pd
+
+    # 20 clusters of 50 identical rows. Every row in a cluster carries the same
+    # value, so the effective sample size is 20, not 1,000. A row-level
+    # bootstrap would report an SE ~sqrt(50) too small; clustering must not.
+    rng = np.random.default_rng(7)
+    values = rng.normal(size=20)
+    df = pd.DataFrame({"unit": np.repeat(np.arange(20), 50),
+                       "x": np.repeat(values, 50)})
+    out = cluster_bootstrap(df, "unit", lambda d: d["x"].mean(),
+                            reps=1500, seed=1)
+    se_cluster = values.std(ddof=1) / np.sqrt(20)
+    se_rows = df["x"].std(ddof=1) / np.sqrt(len(df))
+    got = out.loc["statistic", "se"]
+    assert abs(got - se_cluster) < 0.25 * se_cluster, \
+        f"clustered se {got:.4f} should track {se_cluster:.4f}"
+    assert got > 3 * se_rows, \
+        f"clustered se {got:.4f} must exceed the row-level {se_rows:.4f}"
+
+    # Each DRAW must get its own id, so a cluster drawn twice counts twice.
+    # Without the relabelling a groupby collapses the duplicate and the
+    # interval comes out too narrow.
+    seen = cluster_bootstrap(df, "unit", lambda d: d["unit"].nunique(),
+                             reps=50, seed=2)
+    assert seen.loc["statistic", "point"] == 20
+    assert seen.attrs["draws"]["statistic"].min() == 20, \
+        "duplicated clusters collapsed instead of being relabelled"
+
+    # Reproducible: same seed, same interval.
+    a = cluster_bootstrap(df, "unit", lambda d: d["x"].mean(), reps=200, seed=3)
+    b = cluster_bootstrap(df, "unit", lambda d: d["x"].mean(), reps=200, seed=3)
+    assert a["lo"].equals(b["lo"]) and a["hi"].equals(b["hi"])
+
+    print("viz._selftest: cluster_bootstrap OK "
+          f"(clustered se={got:.4f} vs row-level {se_rows:.4f})")
+
+
+if __name__ == "__main__":
+    _selftest()

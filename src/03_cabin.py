@@ -156,8 +156,9 @@ def main():
     viz.clean(ax)
     viz.baseline_ref(ax, base, f"marginal {base:.1%}")
     viz.save(fig, "03_side_by_deck",
-             "Starboard beats port on every single deck",
-             f"train only, cells with n>=30 - overall S {rs.loc['S','rate']:.1%} vs P {rs.loc['P','rate']:.1%}")
+             "Starboard beats port on seven of the eight populated decks",
+             f"train only, cells with n>=30 (deck T has 5 train rows, excluded) - "
+             f"overall S {rs.loc['S','rate']:.1%} vs P {rs.loc['P','rate']:.1%}")
 
     # ---- cabin number geometry (COMBINED) ---------------------------------
     print(f"\n[cabin number geometry] frame=combined")
@@ -165,9 +166,14 @@ def main():
     print(cn.groupby("Deck", observed=True)["CabinNum"]
           .agg(["size", "min", "max", "median"]).to_string())
 
+    # Count distinct cabins by the FULL `Cabin` string, not by `CabinNum`.
+    # Cabin numbers restart on every deck, so C/38/S and B/38/S share a
+    # *number* and not a cabin; nunique on CabinNum scores them as cohabiting.
+    # The numeric span below stays on CabinNum, which is the only numeric part.
     gg = (combined.dropna(subset=["CabinNum"])
-          .groupby("Group", observed=True)["CabinNum"]
-          .agg(["size", "nunique", "min", "max"]))
+          .groupby("Group", observed=True)
+          .agg(size=("CabinNum", "size"), nunique=("Cabin", "nunique"),
+               min=("CabinNum", "min"), max=("CabinNum", "max")))
     gg = gg[gg["size"] >= 2]
     span = (gg["max"] - gg["min"])
     shared = gg["nunique"] == 1

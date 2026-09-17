@@ -55,15 +55,57 @@ def pair_concordance(df, key):
     }
 
 
+def _pair_swing(codes, transported):
+    """Concordance swing from integer unit codes -- the vectorised twin of
+    `pair_concordance`'s swing, cheap enough to run thousands of times."""
+    k = np.bincount(codes).astype(float)
+    t = np.bincount(codes, weights=transported)
+    f = k - t
+    return ((t * (t - 1)).sum() / (t * (k - 1)).sum()
+            - (f * t).sum() / (f * (k - 1)).sum())
+
+
+def concordance_swings(df):
+    """Group and cabin concordance swings, and the difference between them.
+
+    Written as a single statistic over one frame because the quantity finding 1
+    actually needs an interval for is the *difference*, and the same passengers
+    sit in both terms. Bootstrapping the two swings separately would get the
+    variance of the difference wrong.
+
+    Expects columns Group / Cabin / TARGET. `Cabin` is nested inside `Group`,
+    so it is paired with the group id: under `viz.cluster_bootstrap` a group
+    drawn twice arrives as two ids, and its cabins must split with it rather
+    than collapsing back together.
+    """
+    y = df[TARGET].to_numpy(dtype=float)
+    gc = pd.factorize(df["Group"], sort=False)[0]
+    cab = df["Cabin"]
+    obs = cab.notna().to_numpy()
+    cab_code = pd.factorize(cab[obs], sort=False)[0]
+    nested = gc[obs].astype(np.int64) * (cab_code.max() + 1) + cab_code
+    cc = pd.factorize(nested, sort=False)[0]
+    group, cabin = _pair_swing(gc, y), _pair_swing(cc, y[obs])
+    return {"group": group, "cabin": cabin, "cabin_minus_group": cabin - group}
+
+
 def constancy(combined, key, attr):
-    """Share of multi-member `key` units where `attr` takes a single value."""
-    sub = combined[combined[key].notna() & combined[attr].notna()]
-    nun = sub.groupby(key, observed=True)[attr].nunique()
+    """Share of multi-member `key` units where `attr` takes a single value.
+
+    Only units with >=2 *observed* values of `attr` are testable. A two-person
+    group whose second member has a missing `HomePlanet` carries one distinct
+    value, scores as constant, and was never capable of violating constancy --
+    counting it pads the denominator with units that could not have failed.
+
+    Returns (share single-valued, testable units, multi-member units in frame).
+    """
     sizes = combined[combined[key].notna()].groupby(key, observed=True).size()
     multi = sizes[sizes >= 2].index
-    nun = nun[nun.index.isin(multi)]
-    nun = nun[nun > 0]
-    return (nun == 1).mean(), len(nun)
+    sub = combined[combined[key].isin(multi) & combined[attr].notna()]
+    g = sub.groupby(key, observed=True)[attr]
+    n_observed, nun = g.size(), g.nunique()
+    nun = nun[nun.index.isin(n_observed[n_observed >= 2].index)]
+    return (nun == 1).mean(), len(nun), len(multi)
 
 
 def recoverable(combined, key, attr):
@@ -152,6 +194,30 @@ def main():
               f"(all sizes: {rows[label]['p_mate_t_given_ego_t'] - rows[label]['p_mate_t_given_ego_f']:+.4f})")
     print("    -> the effect is not an artefact of large-group weighting")
 
+    # How big is the gap between the top two rows, and is it bigger than its
+    # own sampling error? The "pairs" are not independent observations -- one
+    # passenger sits in several of them -- so the unit resampled is the travel
+    # group, via viz.cluster_bootstrap.
+    print(f"\n  [uncertainty] cluster bootstrap over travel groups:")
+    cb = viz.cluster_bootstrap(
+        train.loc[train[TARGET].notna(), ["Group", "Cabin", TARGET]],
+        "Group", concordance_swings, reps=4000, seed=0)
+    print(f"    reps={cb.attrs['reps']}  seed={cb.attrs['seed']}  "
+          f"clusters resampled={cb.attrs['clusters']}  "
+          f"({int((1 - cb.attrs['alpha']) * 100)}% percentile intervals)")
+    for name in ["group", "cabin", "cabin_minus_group"]:
+        r = cb.loc[name]
+        print(f"    {name:18s} {r['point']:+.4f}  "
+              f"95% CI [{r['lo']:+.4f}, {r['hi']:+.4f}]  se={r['se']:.4f}")
+    diff = cb.loc["cabin_minus_group"]
+    print(f"    P(cabin swing > group swing) = {diff['p_positive']:.3f}")
+    print(f"    -> cabin vs group: the difference is INSIDE its own interval,")
+    print(f"       so the two are not distinguishable by this data.")
+    print(f"       group vs surname IS separated: the group interval "
+          f"[{cb.loc['group','lo']:+.4f}, {cb.loc['group','hi']:+.4f}] excludes")
+    print(f"       the surname point "
+          f"{rows['surname (family)']['p_mate_t_given_ego_t'] - rows['surname (family)']['p_mate_t_given_ego_f']:+.4f}.")
+
     conc = pd.DataFrame(rows).T
     chance = base**2 + (1 - base) ** 2
     fig, ax = plt.subplots(figsize=(7.5, 3.6))
@@ -181,11 +247,17 @@ def main():
                      "Destination", "Surname", "CryoSleep"]:
             if attr == key:
                 continue
-            share, n = constancy(combined, key, attr)
+            share, n_test, n_multi = constancy(combined, key, attr)
             const_rows.append({"unit": key, "attr": attr,
-                               "units_tested": n, "single_valued": share})
+                               "units_multi": n_multi, "units_tested": n_test,
+                               "untestable": n_multi - n_test,
+                               "single_valued": share})
     const = pd.DataFrame(const_rows)
     print(const.round(4).to_string(index=False))
+    print("  units_multi  = multi-member units of this kind in the frame")
+    print("  units_tested = those with >=2 OBSERVED values of the attribute,")
+    print("                 i.e. the only ones that could have violated it.")
+    print("  -> the 100% results below hold on a denominator that could have broken them.")
 
     piv = const.pivot(index="attr", columns="unit", values="single_valued")
     piv = piv.sort_values("Group", ascending=True)
