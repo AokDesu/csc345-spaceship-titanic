@@ -88,9 +88,9 @@ def patch_paths(source: str, module: str) -> str:
     return source
 
 
-def _cell(kind: str, lines: list) -> dict:
+def _cell(kind: str, lines: list, metadata: dict = None) -> dict:
     src = [ln + "\n" for ln in lines[:-1]] + [lines[-1]]
-    cell = {"cell_type": kind, "metadata": {}, "source": src}
+    cell = {"cell_type": kind, "metadata": metadata or {}, "source": src}
     if kind == "code":
         cell["execution_count"] = None
         cell["outputs"] = []
@@ -171,7 +171,9 @@ def figures_cell(names: list) -> dict:
         blob = base64.b64encode((ROOT / "figures" / f"{n}.png").read_bytes()).decode()
         lines.append(f'    "{n}": "{blob}",')
     lines += ["}", "", "def repo_figure(name):", "    return Image(data=base64.b64decode(FIGURES_B64[name]))"]
-    return _cell("code", lines)
+    # Eight base64 blobs of ~90 KB each. Collapsed, or it is a wall of text
+    # sitting between the reader and the first section of the walkthrough.
+    return _cell("code", lines, {"jupyter": {"source_hidden": True}, "collapsed": True})
 
 
 def footer_cell() -> dict:
