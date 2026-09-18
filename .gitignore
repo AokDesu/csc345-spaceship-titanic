@@ -10,3 +10,6 @@ __pycache__/
 
 # Internal working notes - not published
 HANDOFF.md
+
+# Generated Kaggle notebook - rebuild with tools/build_kaggle_notebook.py
+kaggle/
