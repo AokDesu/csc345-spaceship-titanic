@@ -53,6 +53,37 @@ KERNEL_SLUG = "spaceship-titanic-eda-a-guided-walkthrough"
 KERNEL_TITLE = "Spaceship Titanic EDA - a guided walkthrough"
 BY_PATH_MODULE = "02_groups.py"
 
+DATA_FINDER_TEMPLATE = '''def _kaggle_data_dir():
+    """Locate the competition data among Kaggle's mounted inputs.
+
+    The mount point is not reliably /kaggle/input/<competition>: attaching the
+    competition through the API nests it under /kaggle/input/competitions/.
+    Rather than encode either guess, find the directory that actually holds
+    train.csv, and name the fix when nothing does.
+    """
+    preferred = Path("{data}")
+    if (preferred / "train.csv").is_file():
+        return preferred
+
+    root = Path("/kaggle/input")
+    mounted = None
+    if root.is_dir():
+        found = sorted(root.rglob("train.csv"))
+        if found:
+            return found[0].parent
+        mounted = sorted(str(p.relative_to(root)) for p in root.rglob("*") if p.is_dir())
+
+    raise FileNotFoundError(
+        "No mounted input contains train.csv.\\n"
+        f"  expected      : {{preferred}}\\n"
+        f"  /kaggle/input : {{mounted if mounted else 'nothing (directory missing)'}}\\n"
+        "  Fix: open the notebook on Kaggle, Add Input -> Competitions -> "
+        "Spaceship Titanic, then re-run."
+    )
+
+
+DATA = _kaggle_data_dir()'''
+
 SETUP_MARKER = 'sys.path.insert(0, str(ROOT / "src"))'
 BY_PATH_MARKER = 'spec_from_file_location'
 FIGURE_RE = re.compile(r'display\(Image\(str\(ROOT / "figures" / "([a-z0-9_]+)\.png"\)\)\)')
@@ -80,10 +111,14 @@ def patch_paths(source: str, module: str) -> str:
 
     if module == "load.py":
         before = source
-        source = re.sub(r'^DATA = ROOT / "data"$', f'DATA = Path("{KAGGLE_DATA}")',
-                        source, count=1, flags=re.M)
+        source = re.sub(r'^DATA = ROOT / "data"$', "DATA = _kaggle_data_dir()", source, count=1, flags=re.M)
         if source == before:
             raise SystemExit("load.py: expected DATA assignment not found")
+        # Kaggle names the mount after the competition, but that is an assumption
+        # rather than a guarantee, and a wrong guess fails three cells later with
+        # a bare FileNotFoundError. Find the directory that actually holds the
+        # data, and say what was mounted when there is none.
+        source = source.replace("DATA = _kaggle_data_dir()", DATA_FINDER_TEMPLATE.format(data=KAGGLE_DATA), 1)
 
     # viz.py's FIGURES.mkdir() is non-recursive; KAGGLE_ROOT exists, so it holds.
     return source
@@ -150,6 +185,9 @@ def setup_cell(load_src: str, viz_src: str, groups_src: str) -> list:
         'print("python     :", sys.version.split()[0])',
         'print("pandas     :", pd.__version__)',
         'print("data       :", L.DATA)',
+        '',
+        '_inp = Path("/kaggle/input")',
+        'print("inputs     :", sorted(str(p.relative_to(_inp)) for p in _inp.rglob("*") if p.is_dir()) if _inp.is_dir() else "NONE MOUNTED")',
     ])
 
 
