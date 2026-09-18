@@ -30,6 +30,7 @@ import base64
 import json
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -52,6 +53,8 @@ REPO_URL = "https://github.com/AokDesu/csc345-spaceship-titanic"
 KERNEL_SLUG = "spaceship-titanic-eda-a-guided-walkthrough"
 KERNEL_TITLE = "Spaceship Titanic EDA - a guided walkthrough"
 BY_PATH_MODULE = "02_groups.py"
+FIGURE_DATASET_SLUG = "spaceship-titanic-eda-figures"
+FIGURE_DATASET_TITLE = "Spaceship Titanic EDA figures"
 
 DATA_FINDER_TEMPLATE = '''def _kaggle_data_dir():
     """Locate the competition data among Kaggle's mounted inputs.
@@ -192,27 +195,56 @@ def setup_cell(load_src: str, viz_src: str, groups_src: str) -> list:
 
 
 def figures_cell(names: list) -> dict:
-    """Carry section 8's pre-rendered charts as data.
+    """Load section 8's charts from the attached figures dataset.
 
-    These are outputs of src/0*.py, which does not run here. Embedding keeps
-    the notebook working with Kaggle's internet access switched off, which is
-    the default for a competition notebook.
+    These are outputs of src/0*.py, which does not run in this notebook. They
+    ship as a small Kaggle dataset rather than base64 inside the notebook: a
+    600 KB blob is not something a reader should have to scroll past, and it
+    made the notebook eight times larger than its own content.
     """
-    lines = [
+    return _cell("code", [
         "# Section 8's charts are build products of the repository's analysis scripts,",
-        "# which do not run in this notebook. They are embedded here so the notebook is",
-        "# self-contained and works with Kaggle's internet access off (the default).",
-        "import base64",
+        "# which do not run here. They arrive as an attached dataset, so this notebook",
+        "# still needs no internet access.",
         "",
-        "FIGURES_B64 = {",
-    ]
+        "def _figure_dir():",
+        '    """Find the attached figures dataset among Kaggle\'s mounted inputs."""',
+        '    probe = "%s.png"' % names[0],
+        '    root = Path("/kaggle/input")',
+        "    if root.is_dir():",
+        '        for hit in sorted(root.rglob(probe)):',
+        "            return hit.parent",
+        f'    local = Path("{ROOT}") / "figures"',
+        "    if (local / probe).is_file():",
+        "        return local",
+        "    raise FileNotFoundError(",
+        f'        "Figures dataset not attached. Add Input -> Datasets -> "',
+        f'        "{FIGURE_DATASET_SLUG}, then re-run."',
+        "    )",
+        "",
+        "FIGURE_DIR = _figure_dir()",
+        'print("figures    :", FIGURE_DIR)',
+        "",
+        "def repo_figure(name):",
+        '    return Image(filename=str(FIGURE_DIR / f"{name}.png"))',
+    ])
+
+
+def write_figure_dataset(out_dir: Path, names: list) -> Path:
+    """Stage the figures the notebook displays, ready for `kaggle datasets`."""
+    user = kaggle_username()
+    d = out_dir / "figures-dataset"
+    d.mkdir(parents=True, exist_ok=True)
+    for old in d.glob("*.png"):
+        old.unlink()
     for n in names:
-        blob = base64.b64encode((ROOT / "figures" / f"{n}.png").read_bytes()).decode()
-        lines.append(f'    "{n}": "{blob}",')
-    lines += ["}", "", "def repo_figure(name):", "    return Image(data=base64.b64decode(FIGURES_B64[name]))"]
-    # Eight base64 blobs of ~90 KB each. Collapsed, or it is a wall of text
-    # sitting between the reader and the first section of the walkthrough.
-    return _cell("code", lines, {"jupyter": {"source_hidden": True}, "collapsed": True})
+        shutil.copy2(ROOT / "figures" / f"{n}.png", d / f"{n}.png")
+    (d / "dataset-metadata.json").write_text(json.dumps({
+        "title": FIGURE_DATASET_TITLE,
+        "id": f"{user}/{FIGURE_DATASET_SLUG}",
+        "licenses": [{"name": "CC0-1.0"}],
+    }, indent=2) + "\n")
+    return d
 
 
 def footer_cell() -> dict:
@@ -278,7 +310,7 @@ def write_metadata(out_dir: Path, notebook_name: str) -> tuple:
         "enable_gpu": "false",
         "enable_tpu": "false",
         "enable_internet": "false",
-        "dataset_sources": [],
+        "dataset_sources": [f"{user}/{FIGURE_DATASET_SLUG}"],
         "competition_sources": ["spaceship-titanic"],
         "kernel_sources": [],
         "model_sources": [],
@@ -362,8 +394,11 @@ def main() -> None:
     out.write_text(json.dumps(nb, indent=1, ensure_ascii=False) + "\n")
     print(f"wrote {out}")
     print(f"  cells    : {len(cells)}")
-    print(f"  embedded : {len(names)} figures")
+    print(f"  figures  : {len(names)} (from attached dataset)")
     print(f"  size     : {out.stat().st_size / 1048576:.1f} MB")
+
+    ds = write_figure_dataset(out.parent, names)
+    print(f"staged {ds}  ({len(names)} figures)")
 
     meta_path, user = write_metadata(out.parent, out.name)
     print(f"wrote {meta_path}")
