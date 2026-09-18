@@ -30,6 +30,7 @@ import base64
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -199,6 +200,18 @@ def kaggle_username() -> str:
     """
     if os.environ.get("KAGGLE_USERNAME"):
         return os.environ["KAGGLE_USERNAME"]
+
+    # Access-token auth (KAGGLE_API_TOKEN) writes no kaggle.json, so ask the CLI.
+    try:
+        out = subprocess.run(["kaggle", "config", "view"], capture_output=True,
+                             text=True, timeout=30).stdout
+        m = re.search(r"^-\s*username:\s*(\S+)$", out, re.M)
+        if m and m.group(1) != "None":
+            return m.group(1)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    # Legacy username+key credentials file.
     for c in (Path.home() / ".kaggle" / "kaggle.json",
               Path.home() / ".config" / "kaggle" / "kaggle.json"):
         if c.exists():
